@@ -12,10 +12,10 @@ const Item = require("../../models/Item");
 router.get("/", (req, res) => {
   db.query("SELECT * FROM items")
     .then(items => {
-      if (items) {
-        res.json(items.rows);
+      if (isEmpty(items.rows)) {
+        return res.json({ message: "no items found" });
       } else {
-        res.json({ message: "no items found" });
+        return res.json(items.rows);
       }
     })
     .catch(ex => {
@@ -30,10 +30,10 @@ router.get("/", (req, res) => {
 router.get("/:id", (req, res) => {
   db.query("SELECT * FROM items WHERE id = $1", [req.params.id])
     .then(item => {
-      if (item) {
-        res.json(item.rows);
-      } else {
+      if (isEmpty(item.rows)) {
         res.status(404).json({ message: "item not found" });
+      } else {
+        res.json(item.rows);
       }
     })
     .catch(ex => {
@@ -82,9 +82,12 @@ router.post("/", (req, res) => {
       weight,
       size
     ])
-      .then(() =>
-        res.json({ success: true, message: "successfully created item" })
-      )
+      .then(() => {
+        return res.json({
+          success: true,
+          message: "successfully created item"
+        });
+      })
       .catch(ex => {
         return res
           .status(500)
@@ -132,7 +135,14 @@ router.put("/:id", (req, res) => {
       req.params.id
     ])
       .then(updated => {
-        res.json({ success: true, message: "successfully updated item" });
+        if (updated.rowCount == 0) {
+          return res.status(404).json({ message: "item not found" });
+        } else {
+          return res.json({
+            success: true,
+            message: "successfully updated item"
+          });
+        }
       })
       .catch(ex => {
         return res
@@ -147,7 +157,14 @@ router.put("/:id", (req, res) => {
 router.delete("/:id", (req, res) => {
   db.query("DELETE FROM items WHERE id=($1)", [req.params.id])
     .then(removed => {
-      res.json({ success: true, message: "successfully removed item" });
+      if (removed.rowCount == 0) {
+        return res.status(404).json({ message: "item not found" });
+      } else {
+        return res.json({
+          success: true,
+          message: "successfully removed item"
+        });
+      }
     })
     .catch(ex => {
       return res
