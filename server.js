@@ -1,26 +1,11 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
 // INIT App
 const app = express();
 
-// DB CONFIG
-const db = require("./config/dbSecretKeys").mongoURI;
-
-// DB CONNECT
-mongoose
-  .connect(
-    db,
-    { useNewUrlParser: true }
-  )
-  .then(() => {
-    console.log("we are connected to the DB");
-  })
-  .catch(err => console.log(err));
-
-//   MIDDLEWARES
+// MIDDLEWARES
 // cors
 app.use(cors());
 // body parser middleware

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const validator = require("validator");
 const isEmpty = require("../../utils/isEmpty");
+const db = require("../../config/db");
 
 // MODELS
 const Item = require("../../models/Item");
@@ -9,11 +10,10 @@ const Item = require("../../models/Item");
 // GET | api/items
 // display all the items
 router.get("/", (req, res) => {
-  Item.find()
-    .sort({ _id: -1 })
+  db.query("SELECT * FROM items")
     .then(items => {
       if (items) {
-        res.json(items);
+        res.json(items.rows);
       } else {
         res.json({ message: "no items found" });
       }
@@ -28,10 +28,10 @@ router.get("/", (req, res) => {
 // GET | api/items/:id
 // get a single item
 router.get("/:id", (req, res) => {
-  Item.findById(req.params.id)
+  db.query("SELECT * FROM items WHERE id = $1", [req.params.id])
     .then(item => {
       if (item) {
-        res.json(item);
+        res.json(item.rows);
       } else {
         res.status(404).json({ message: "item not found" });
       }
@@ -75,15 +75,13 @@ router.post("/", (req, res) => {
     // data sent has errors, show errors
     return res.status(400).json(errors);
   } else {
-    // no erros
-    const newItem = new Item({
-      name: req.body.name,
-      weight: req.body.weight,
-      size: req.body.size
-    });
     // save item
-    newItem
-      .save()
+    const { name, weight, size } = req.body;
+    db.query("INSERT INTO items (name, weight, size) VALUES ($1, $2, $3)", [
+      name,
+      weight,
+      size
+    ])
       .then(() =>
         res.json({ success: true, message: "successfully created item" })
       )
@@ -127,21 +125,14 @@ router.put("/:id", (req, res) => {
   if (!isValid) {
     return res.status(400).json(errors);
   } else {
-    Item.findById(req.params.id)
-      .then(item => {
-        if (item) {
-          item.name = req.body.name;
-          item.weight = req.body.weight;
-          item.size = req.body.size;
-          // edit/update
-          item
-            .save()
-            .then(() =>
-              res.json({ success: true, message: "successfully updated item" })
-            );
-        } else {
-          res.status(404).json({ message: "item not found" });
-        }
+    db.query("UPDATE items SET name=$1, weight=$2, size=$3 Where id=($4)", [
+      req.body.name,
+      req.body.weight,
+      req.body.size,
+      req.params.id
+    ])
+      .then(updated => {
+        res.json({ success: true, message: "successfully updated item" });
       })
       .catch(ex => {
         return res
@@ -154,17 +145,9 @@ router.put("/:id", (req, res) => {
 // DELETE | api/items/:id
 // Delete an item
 router.delete("/:id", (req, res) => {
-  Item.findById(req.params.id)
-    .then(item => {
-      if (item) {
-        item
-          .remove()
-          .then(() =>
-            res.json({ success: true, message: "successfully removed item" })
-          );
-      } else {
-        res.status(404).json({ message: "item not found" });
-      }
+  db.query("DELETE FROM items WHERE id=($1)", [req.params.id])
+    .then(removed => {
+      res.json({ success: true, message: "successfully removed item" });
     })
     .catch(ex => {
       return res
